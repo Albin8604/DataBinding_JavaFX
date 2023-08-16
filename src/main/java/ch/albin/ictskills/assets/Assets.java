@@ -4,11 +4,14 @@ import java.net.URL;
 
 public enum Assets {
 
-    StandartStyle("css/standartStyle.css"),
-    Main("Main.fxml"),
-    MANIFEST("META-INF/MANIFEST.MF"),
-    ThumbsUp("img/thumbsUp.png"),
-    ThumbsDown("img/thumbsDown.png"),
+    StandartStyle("/css/standartStyle.css"),
+    ProfileControl("/profileControl.fxml"),
+    Main("/Main.fxml"),
+    MANIFEST("/META-INF/MANIFEST.MF"),
+    ThumbsUp("/img/thumbsUp.png"),
+    UnknownPB("/img/unknownPB.png"),
+    ThumbsDown("/img/thumbsDown.png"),
+    DrawImage("/DrawImage.fxml"),
 ;
     final String filename;
 
@@ -17,6 +20,6 @@ public enum Assets {
     }
 
     public URL asUrl(){
-        return Assets.class.getResource("/"+filename);
+        return Assets.class.getResource(filename);
     }
 }

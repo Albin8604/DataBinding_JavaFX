@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -32,25 +33,31 @@ public class Person {
     @Column(name = "aktiv")
     private Byte aktiv;
 
+    @Lob
+    private byte[] image;
+
     public Person() {
     }
 
-    public Person(Integer id, Integer pNr, String name, String vorname, String tel, boolean aktiv) {
+    public Person(Integer id, Integer pNr, String name, String vorname, String tel, boolean aktiv,byte[] image) {
         this.id = id;
         this.pNr = pNr;
         this.name = name;
         this.vorname = vorname;
         this.tel = tel;
+        this.image = image;
         setAktiv(aktiv);
     }
+
 
     public Person(PersonView personView){
         this(
                 personView.getPerson().getId(),personView.getpNr(),
                 personView.getName(), personView.getVorname(),
-                personView.getTel(), personView.getAktiv()
+                personView.getTel(), personView.getAktiv(), personView.getPerson().getImage()
         );
     }
+
     public Integer getId() {
         return id;
     }
@@ -99,4 +106,47 @@ public class Person {
         this.aktiv = Converter.convertBooleanToByte(aktiv);
     }
 
+    /**
+     * gets the value of pNr
+     */
+    public Integer getpNr() {
+        return pNr;
+    }
+
+    /**
+     * sets the value of pNr
+     *
+     * @return PersonTemp
+     */
+    public Person setpNr(Integer pNr) {
+        this.pNr = pNr;
+        return this;
+    }
+
+    /**
+     * sets the value of aktiv
+     *
+     * @return PersonTemp
+     */
+    public Person setAktiv(Byte aktiv) {
+        this.aktiv = aktiv;
+        return this;
+    }
+
+    /**
+     * gets the value of image
+     */
+    public byte[] getImage() {
+        return image;
+    }
+
+    /**
+     * sets the value of image
+     *
+     * @return PersonTemp
+     */
+    public Person setImage(byte[] image) {
+        this.image = image;
+        return this;
+    }
 }

@@ -34,7 +34,7 @@ public class WriteAssets {
             System.lineSeparator() +
             "    public URL asUrl(){" +
             System.lineSeparator() +
-            "        return Assets.class.getClassLoader().getResource(filename);" +
+            "        return Assets.class.getResource(filename);" +
             System.lineSeparator() +
             "    }" +
             System.lineSeparator() +
@@ -104,7 +104,7 @@ public class WriteAssets {
     }
 
     private String prepareAttributes(String fileName, String fileNameWithExtension, String folder) {
-        return "    " + capitalize(fileName) + "(\"" + folder + fileNameWithExtension + "\")";
+        return "    " + capitalize(fileName) + "(\"/" + folder + fileNameWithExtension + "\")";
     }
 
     private static String extractPackage() {

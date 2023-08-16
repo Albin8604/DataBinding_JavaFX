@@ -1,5 +1,6 @@
 package ch.albin.ictskills.db;
 
+
 import ch.albin.ictskills.model.Person;
 
 import java.util.List;

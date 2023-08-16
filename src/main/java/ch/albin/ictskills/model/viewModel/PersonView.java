@@ -1,12 +1,14 @@
 package ch.albin.ictskills.model.viewModel;
 
 import ch.albin.ictskills.assets.Assets;
-import ch.albin.ictskills.controller.MainController;
 import ch.albin.ictskills.model.Person;
+import ch.albin.ictskills.util.FXMLHelper;
+import ch.albin.ictskills.util.ui.annotation.TableIgnore;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.Node;
 import javafx.scene.control.TableCell;
@@ -14,6 +16,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,8 +30,12 @@ public class PersonView {
     private SimpleStringProperty vorname;
     private SimpleStringProperty tel;
     private BooleanProperty aktiv;
+    private SimpleObjectProperty<BorderPane> profile;
 
-    public PersonView(Person person, TableView<PersonView> tableView, MainController controller) {
+    @TableIgnore
+    private SimpleObjectProperty<Byte[]> image;
+
+    public PersonView(Person person, TableView<PersonView> tableView) {
         this.person = person;
 
         pNr = new SimpleIntegerProperty(person.getPNr() == null ? 0 : person.getPNr());
@@ -49,6 +57,15 @@ public class PersonView {
         });
 
         aktiv = new SimpleBooleanProperty(person.getAktiv());
+        image= new SimpleObjectProperty<>(ArrayUtils.toObject(person.getImage()));
+        profile= new SimpleObjectProperty<>(FXMLHelper.loadModel(Assets.ProfileControl,getPerson()));
+
+        image.addListener(
+                ChangeListener -> {
+                    getPerson().setImage(ArrayUtils.toPrimitive(image.getValue()));
+                    profile.set(FXMLHelper.loadModel(Assets.ProfileControl,getPerson()));
+                }
+        );
     }
 
     public PersonView() {
@@ -139,6 +156,44 @@ public class PersonView {
 
     public void setAktiv(boolean aktiv) {
         this.aktiv.set(aktiv);
+    }
+
+    public boolean isAktiv() {
+        return aktiv.get();
+    }
+
+    public BorderPane getProfile() {
+        return profile.get();
+    }
+
+    public SimpleObjectProperty<BorderPane> profileProperty() {
+        return profile;
+    }
+
+    public void setProfile(BorderPane profile) {
+        this.profile.set(profile);
+    }
+
+    /**
+     * sets the value of person
+     *
+     * @return PersonViewTemp
+     */
+    public PersonView setPerson(Person person) {
+        this.person = person;
+        return this;
+    }
+
+    public Byte[] getImage() {
+        return image.get();
+    }
+
+    public SimpleObjectProperty<Byte[]> imageProperty() {
+        return image;
+    }
+
+    public void setImage(Byte[] image) {
+        this.image.set(image);
     }
 
     @Override

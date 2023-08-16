@@ -1,9 +1,14 @@
 package ch.albin.ictskills.controller;
 
+import ch.albin.ictskills.assets.Assets;
 import ch.albin.ictskills.model.Person;
 import ch.albin.ictskills.model.viewModel.DiagrammChooserModel;
 import ch.albin.ictskills.model.viewModel.PersonView;
+import ch.albin.ictskills.util.ByteAStringConverter;
 import ch.albin.ictskills.util.DoubleIntegerStringConverter;
+import ch.albin.ictskills.util.FXMLHelper;
+import ch.albin.ictskills.util.files.chooser.ChooserManager;
+import ch.albin.ictskills.util.files.chooser.Extensions;
 import ch.albin.ictskills.util.ui.TableManager;
 import ch.albin.ictskills.util.ui.UIAlertMsg;
 import ch.albin.ictskills.util.ui.UIHelper;
@@ -17,6 +22,7 @@ import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
+import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
@@ -24,9 +30,15 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javafx.util.converter.IntegerStringConverter;
+import org.apache.commons.lang3.ArrayUtils;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 import static ch.albin.ictskills.util.Validator.*;
@@ -36,9 +48,16 @@ public class MainController extends Controller {
 
     public ChoiceBox<DiagrammChooserModel> diagrammChooser;
     public BorderPane chartPane;
+    public TextField profilePicPathTextField;
+    public Stage stage;
+    public TextField pNrSearchField;
+    public TextField nameSearchField;
+    public TextField vornameSearchField;
+    public TextField telSearchField;
+    public CheckBox aktivSearchBox;
     private boolean isNewPerson = false;
     private static final ObservableList<Person> TEST_PERSON_LIST = FXCollections.observableList(PERSON_DAO.selectAll());
-    private PersonView lastSelectedPerson = null;
+    private static PersonView lastSelectedPerson = null;
     public TextField pNrTextField;
     public TextField nameTextField;
     public TextField vornameTextField;
@@ -48,6 +67,10 @@ public class MainController extends Controller {
 
     private static final SimpleIntegerProperty AKTIV_DATA = new SimpleIntegerProperty();
     private static final SimpleIntegerProperty INAKTIV_DATA = new SimpleIntegerProperty();
+
+    private static final ObservableList<PersonView> TABLE_DATA = FXCollections.observableArrayList(
+            obs -> new Observable[]{obs.aktivProperty()}
+    );
 
     @Override
     public void init() {
@@ -60,21 +83,17 @@ public class MainController extends Controller {
         addRegexValidationToControl(nameTextField, ONLY_LETTER_REGEX);
         addRegexValidationToControl(vornameTextField, ONLY_LETTER_REGEX);
 
-        final ObservableList<PersonView> tableData = FXCollections.observableArrayList(
-                obs -> new Observable[]{obs.aktivProperty()}
-        );
-
         AKTIV_DATA.bind(
-                Bindings.size(tableData.filtered(PersonView::getAktiv))
+                Bindings.size(TABLE_DATA.filtered(PersonView::getAktiv))
         );
 
         INAKTIV_DATA.bind(
-                Bindings.size(tableData.filtered(person -> !person.getAktiv()))
+                Bindings.size(TABLE_DATA.filtered(person -> !person.getAktiv()))
         );
 
-        tableData.addAll(TEST_PERSON_LIST.stream().map(person -> new PersonView(person, personTable, this)).toList());
+        TABLE_DATA.addAll(TEST_PERSON_LIST.stream().map(person -> new PersonView(person, personTable)).toList());
 
-        TableManager.initColumns(tableData, personTable);
+        TableManager.initColumns(TABLE_DATA, personTable);
 
         updateTable();
 
@@ -82,6 +101,50 @@ public class MainController extends Controller {
         clickedOnTable();
 
         buildPieChart();
+
+        pNrSearchField.textProperty().addListener(ChangeListener -> {
+            personTable.setItems(
+                    TABLE_DATA.filtered(
+                            item ->
+                                    String.valueOf(item.getpNr()).startsWith(pNrSearchField.getText().trim())
+                    )
+            );
+        });
+
+        nameSearchField.textProperty().addListener(ChangeListener -> {
+            personTable.setItems(
+                    TABLE_DATA.filtered(
+                            item ->
+                                    item.getName().toUpperCase().startsWith(nameSearchField.getText().toUpperCase().trim())
+                    )
+            );
+        });
+
+        vornameSearchField.textProperty().addListener(ChangeListener -> {
+            personTable.setItems(
+                    personTable.getItems().filtered(
+                            item ->
+                                    item.getName().toUpperCase().startsWith(vornameSearchField.getText().toUpperCase().trim())
+                    )
+            );
+        });
+
+        telSearchField.textProperty().addListener(ChangeListener -> {
+            personTable.setItems(
+                    personTable.getItems().filtered(
+                            item ->
+                                    item.getName().toUpperCase().startsWith(telSearchField.getText().toUpperCase().trim())
+                    )
+            );
+        });
+
+        aktivSearchBox.selectedProperty().addListener(ChangeListener -> {
+            personTable.setItems(
+                    personTable.getItems().filtered(
+                            item -> aktivSearchBox.isSelected() == item.getAktiv()
+                    )
+            );
+        });
     }
 
     private void buildPieChart() {
@@ -106,23 +169,34 @@ public class MainController extends Controller {
         chartPane.setCenter(barChart);
     }
 
-    private List<XYChart.Series<String,Number>> createAktivInaktivSeries(){
+    private void buildScatterChart() {
+        final ScatterChart<String, Number> scatterChart = new ScatterChart<>(createXAxis(), createYAxis());
+
+        scatterChart.getData().addAll(createAktivInaktivSeries());
+
+        chartPane.setCenter(scatterChart);
+    }
+
+    private List<XYChart.Series<String, Number>> createAktivInaktivSeries() {
         return List.of(
-          createAktivSeries(),
-          createInaktivSeries()
+                createAktivSeries(),
+                createInaktivSeries()
         );
     }
-    private XYChart.Data<String, Number> createAktivXYData(){
+
+    private XYChart.Data<String, Number> createAktivXYData() {
         final XYChart.Data<String, Number> aktivXYData = new XYChart.Data<>("Aktiv", AKTIV_DATA.get());
         aktivXYData.YValueProperty().bind(AKTIV_DATA);
         return aktivXYData;
     }
-    private XYChart.Data<String, Number> createInaktivXYData(){
+
+    private XYChart.Data<String, Number> createInaktivXYData() {
         final XYChart.Data<String, Number> inaktivXYData = new XYChart.Data<>("Inaktiv", INAKTIV_DATA.get());
         inaktivXYData.YValueProperty().bind(INAKTIV_DATA);
         return inaktivXYData;
     }
-    private XYChart.Series<String, Number> createAktivSeries(){
+
+    private XYChart.Series<String, Number> createAktivSeries() {
         final XYChart.Series<String, Number> aktivSeries = new XYChart.Series<>();
 
         aktivSeries.setName("Aktiv");
@@ -130,7 +204,8 @@ public class MainController extends Controller {
 
         return aktivSeries;
     }
-    private XYChart.Series<String, Number> createInaktivSeries(){
+
+    private XYChart.Series<String, Number> createInaktivSeries() {
         final XYChart.Series<String, Number> inaktivSeries = new XYChart.Series<>();
 
         inaktivSeries.setName("Inaktiv");
@@ -138,11 +213,13 @@ public class MainController extends Controller {
 
         return inaktivSeries;
     }
-    private CategoryAxis createXAxis(){
+
+    private CategoryAxis createXAxis() {
         final CategoryAxis xAxis = new CategoryAxis();
         return xAxis;
     }
-    private NumberAxis createYAxis(){
+
+    private NumberAxis createYAxis() {
         final NumberAxis yAxis = new NumberAxis();
         StringConverter<? extends Number> stringConverter = new DoubleIntegerStringConverter();
 
@@ -154,7 +231,7 @@ public class MainController extends Controller {
 
     private void updateTable() {
         final ObservableList<PersonView> PERSON_VIEW_LIST = FXCollections.observableArrayList(
-                TEST_PERSON_LIST.stream().map(person -> new PersonView(person, personTable, this)).toList()
+                TEST_PERSON_LIST.stream().map(person -> new PersonView(person, personTable)).toList()
         );
 
         personTable.getItems().clear();
@@ -166,27 +243,34 @@ public class MainController extends Controller {
         if (personView == null) {
             return;
         }
+
         if (lastSelectedPerson != null) {
             Bindings.unbindBidirectional(pNrTextField.textProperty(), lastSelectedPerson.pNrProperty());
             Bindings.unbindBidirectional(nameTextField.textProperty(), lastSelectedPerson.nameProperty());
             Bindings.unbindBidirectional(vornameTextField.textProperty(), lastSelectedPerson.vornameProperty());
             Bindings.unbindBidirectional(telTextField.textProperty(), lastSelectedPerson.telProperty());
             Bindings.unbindBidirectional(aktivCheckBox.selectedProperty(), lastSelectedPerson.aktivProperty());
+            Bindings.unbindBidirectional(profilePicPathTextField.textProperty(), lastSelectedPerson.imageProperty());
         }
 
         StringConverter<? extends Number> stringConverter = new IntegerStringConverter();
+        StringConverter<? extends Byte[]> stringConverterForBorderPane = new ByteAStringConverter();
 
         Bindings.bindBidirectional(pNrTextField.textProperty(), personView.pNrProperty(), ((StringConverter<Number>) stringConverter));
         Bindings.bindBidirectional(nameTextField.textProperty(), personView.nameProperty());
         Bindings.bindBidirectional(vornameTextField.textProperty(), personView.vornameProperty());
         Bindings.bindBidirectional(telTextField.textProperty(), personView.telProperty());
         Bindings.bindBidirectional(aktivCheckBox.selectedProperty(), personView.aktivProperty());
+        Bindings.bindBidirectional(profilePicPathTextField.textProperty(), personView.imageProperty(), (StringConverter<Byte[]>) stringConverterForBorderPane);
 
         lastSelectedPerson = personView;
     }
 
     private boolean isInputValid() {
-        return (boolean) pNrTextField.getUserData() && (boolean) nameTextField.getUserData() && (boolean) vornameTextField.getUserData() && (boolean) telTextField.getUserData();
+        return (boolean) pNrTextField.getUserData() &&
+                (boolean) nameTextField.getUserData() &&
+                (boolean) vornameTextField.getUserData() &&
+                (boolean) telTextField.getUserData();
     }
 
     public void save() {
@@ -231,7 +315,7 @@ public class MainController extends Controller {
 
     }
 
-    public void delete(ActionEvent actionEvent) {
+    public void delete() {
         PersonView selectedItem = personTable.getSelectionModel().getSelectedItem();
 
         if (selectedItem == null) {
@@ -258,6 +342,35 @@ public class MainController extends Controller {
             case 2 -> {
                 buildBarChart();
             }
+            case 3 -> {
+                buildScatterChart();
+            }
+        }
+    }
+
+    public void chooseProfilePic() {
+        File choosenFile = ChooserManager.getChoosedOpenFile(stage, Extensions.JPEG, Extensions.JPG, Extensions.PNG);
+
+        if (choosenFile == null) {
+            UIHelper.createAndShowAlert(Alert.AlertType.ERROR, UIAlertMsg.FILE_MISSING);
+            return;
+        }
+
+        profilePicPathTextField.textProperty().set(choosenFile.getAbsolutePath());
+    }
+
+    public void drawProfilePic(ActionEvent actionEvent) {
+        Stage drawStage = FXMLHelper.load(Assets.DrawImage);
+        drawStage.initModality(Modality.APPLICATION_MODAL);
+        drawStage.show();
+    }
+
+    public static void setDrawnProfilePic(File pic) {
+        try {
+            lastSelectedPerson.setImage(ArrayUtils.toObject(Files.readAllBytes(pic.toPath())));
+            pic.delete();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
