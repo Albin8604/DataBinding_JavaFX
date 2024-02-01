@@ -9,6 +9,7 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -107,6 +108,11 @@
                         <TextField fx:id="vornameSearchField" layoutX="10.0" layoutY="36.0" promptText="Vorname" />
                         <TextField fx:id="telSearchField" layoutX="10.0" layoutY="62.0" promptText="Tel" />
                         <CheckBox fx:id="aktivSearchBox" mnemonicParsing="false" text="Aktiv" />
+                        <HBox alignment="CENTER">
+                           <children>
+                              <ToggleButton fx:id="toggleBtn" mnemonicParsing="false" onAction="#searchToggle" style="-fx-background-color: cb0508;" text="Off" />
+                           </children>
+                        </HBox>
                      </children>
                      <BorderPane.margin>
                         <Insets right="10.0" />

@@ -1,5 +1,4 @@
 package ch.albin.ictskills;
-
 public class StarterStarter {
     /*
     private static final List<Player> PLAYER_DATA = List.of(

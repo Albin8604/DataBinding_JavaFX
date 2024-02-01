@@ -16,6 +16,8 @@ import javafx.scene.layout.Pane;
 
 import java.util.regex.Pattern;
 
+import static ch.albin.ictskills.util.Validator.TEL_REGEX;
+
 public class UIHelper {
     public static void createAndShowAlert(Alert.AlertType alertType, UIAlertMsg uiAlertMsg){
         createAndShowAlert(alertType,uiAlertMsg.msg);
@@ -95,9 +97,17 @@ public class UIHelper {
 
     public static void addRegexValidationToControl(TextField control, String regex){
         TextFormatter<?> textFormatter = new TextFormatter<>(change -> {
+            change.getControlNewText();
+            if (change.getControlNewText().isEmpty()){
+                if (regex.equals(TEL_REGEX)){
+                    change.setText("+"+change.getText());
+                }
+            }
+
             if (change.getControlNewText().matches(regex)) {
                 control.getStyleClass().remove("invalid-input");
                 control.setUserData(true);
+
                 return change;
             } else {
                 control.getStyleClass().add("invalid-input");

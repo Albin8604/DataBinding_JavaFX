@@ -17,7 +17,6 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
@@ -29,6 +28,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -55,6 +55,7 @@ public class MainController extends Controller {
     public TextField vornameSearchField;
     public TextField telSearchField;
     public CheckBox aktivSearchBox;
+    public ToggleButton toggleBtn;
     private boolean isNewPerson = false;
     private static final ObservableList<Person> TEST_PERSON_LIST = FXCollections.observableList(PERSON_DAO.selectAll());
     private static PersonView lastSelectedPerson = null;
@@ -70,7 +71,10 @@ public class MainController extends Controller {
 
     private static final ObservableList<PersonView> TABLE_DATA = FXCollections.observableArrayList(
             obs -> new Observable[]{obs.aktivProperty()}
+
     );
+
+    private boolean isSearchActive = false;
 
     @Override
     public void init() {
@@ -78,10 +82,7 @@ public class MainController extends Controller {
         diagrammChooser.getSelectionModel().selectFirst();
         changeDiagramm();
 
-        addRegexValidationToControl(telTextField, TEL_REGEX);
-        addRegexValidationToControl(pNrTextField, getNumberRegexInRange(6, 8));
-        addRegexValidationToControl(nameTextField, ONLY_LETTER_REGEX);
-        addRegexValidationToControl(vornameTextField, ONLY_LETTER_REGEX);
+        addRegexValidationsToControls();
 
         AKTIV_DATA.bind(
                 Bindings.size(TABLE_DATA.filtered(PersonView::getAktiv))
@@ -98,11 +99,26 @@ public class MainController extends Controller {
         updateTable();
 
         personTable.getSelectionModel().selectFirst();
+
         clickedOnTable();
 
         buildPieChart();
 
+        setListeners();
+    }
+
+    private void addRegexValidationsToControls(){
+        addRegexValidationToControl(telTextField, TEL_REGEX);
+        addRegexValidationToControl(pNrTextField, getNumberRegexInRange(6, 8));
+        addRegexValidationToControl(nameTextField, ONLY_LETTER_REGEX);
+        addRegexValidationToControl(vornameTextField, ONLY_LETTER_REGEX);
+    }
+    private void setListeners(){
         pNrSearchField.textProperty().addListener(ChangeListener -> {
+            if (!isSearchActive) {
+                return;
+            }
+
             personTable.setItems(
                     TABLE_DATA.filtered(
                             item ->
@@ -112,6 +128,9 @@ public class MainController extends Controller {
         });
 
         nameSearchField.textProperty().addListener(ChangeListener -> {
+            if (!isSearchActive) {
+                return;
+            }
             personTable.setItems(
                     TABLE_DATA.filtered(
                             item ->
@@ -121,6 +140,9 @@ public class MainController extends Controller {
         });
 
         vornameSearchField.textProperty().addListener(ChangeListener -> {
+            if (!isSearchActive) {
+                return;
+            }
             personTable.setItems(
                     personTable.getItems().filtered(
                             item ->
@@ -130,6 +152,9 @@ public class MainController extends Controller {
         });
 
         telSearchField.textProperty().addListener(ChangeListener -> {
+            if (!isSearchActive) {
+                return;
+            }
             personTable.setItems(
                     personTable.getItems().filtered(
                             item ->
@@ -139,6 +164,9 @@ public class MainController extends Controller {
         });
 
         aktivSearchBox.selectedProperty().addListener(ChangeListener -> {
+            if (!isSearchActive) {
+                return;
+            }
             personTable.setItems(
                     personTable.getItems().filtered(
                             item -> aktivSearchBox.isSelected() == item.getAktiv()
@@ -359,7 +387,7 @@ public class MainController extends Controller {
         profilePicPathTextField.textProperty().set(choosenFile.getAbsolutePath());
     }
 
-    public void drawProfilePic(ActionEvent actionEvent) {
+    public void drawProfilePic() {
         Stage drawStage = FXMLHelper.load(Assets.DrawImage);
         drawStage.initModality(Modality.APPLICATION_MODAL);
         drawStage.show();
@@ -371,6 +399,28 @@ public class MainController extends Controller {
             pic.delete();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void clearAllSearchFields(){
+        pNrSearchField.setText(null);
+        nameSearchField.setText(null);
+        vornameSearchField.setText(null);
+        telSearchField.setText(null);
+        aktivSearchBox.setSelected(false);
+    }
+    public void searchToggle() {
+        isSearchActive = toggleBtn.isSelected();
+
+        if (isSearchActive) {
+            toggleBtn.setText("On");
+            toggleBtn.setStyle("-fx-background-color: #1d9d0d");
+        }else {
+            toggleBtn.setText("Off");
+            toggleBtn.setStyle("-fx-background-color: #cb0508");
+
+            clearAllSearchFields();
+            personTable.setItems(TABLE_DATA);
         }
     }
 }
